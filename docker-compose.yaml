@@ -2,11 +2,4 @@ version: "3"
 services:
   ignition_math:
     build: ./docker
-    working_dir: /root/app
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - ~/.Xauthority:/root/.Xauthority
     tty: true
-    environment:
-      DISPLAY: $DISPLAY
-      QT_X11_NO_MITSHM: 1

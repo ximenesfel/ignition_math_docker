@@ -1,19 +1,18 @@
-FROM gcc:8.4
-
-###### Install cmake #########
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3-Linux-x86_64.sh \
-      -q -O /tmp/cmake-install.sh \
-      && chmod u+x /tmp/cmake-install.sh \
-      && mkdir /usr/bin/cmake \
-      && /tmp/cmake-install.sh --skip-license --prefix=/usr/bin/cmake \
-      && rm /tmp/cmake-install.sh
-
-ENV PATH="/usr/bin/cmake/bin:${PATH}"
+FROM ubuntu:bionic
 
 #### Install dependences #####
 RUN apt update && \
-    apt-get install -y libeigen3-dev doxygen swig
+    apt-get install -y cmake build-essential g++-8 git wget libeigen3-dev doxygen curl swig ruby-dev cppcheck && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8 --slave /usr/bin/gcov gcov /usr/bin/gcov-8
 
+### Install lcov ####
+WORKDIR /root
+RUN git clone https://github.com/linux-test-project/lcov.git
+WORKDIR /root/lcov
+RUN git checkout 1e0df571
+RUN make install
+WORKDIR /root
+RUN rm -r lcov
 
 ### Install ignition cmake #####
 
@@ -53,8 +52,14 @@ RUN git clone -b ign-math6 https://github.com/ignitionrobotics/ign-math
 WORKDIR /root/ign-math
 RUN mkdir build
 WORKDIR /root/ign-math/build
-RUN cmake ..
-RUN make -j8
-RUN make install
+RUN cmake .. -DCMAKE_BUILD_TYPE=coverage && \
+    make -j8 && \
+    make doc && \
+    curl -s https://github.com/ignitionrobotics/ign-cmake/raw/master/tools/doc_check.sh && \
+    make test && \
+    make coverage && \
+    curl -s https://raw.githubusercontent.com/codecov/codecov-bash/4678d212cce2078bbaaf5027af0c0dafaad6a095/codecov -X gcovout -X gcov && \
+    make codecheck && \
+    make install
 
 WORKDIR /root
